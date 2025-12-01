@@ -7,10 +7,11 @@ import configureStore from '../../store/configureStore';
 import { setEvents } from '../../actions/events';
 import { getAllEvents } from '../../services/EventService';
 
-test('renders dashboard title', () => {
+test('renders dashboard title', async () => {
   const div = document.createElement('div');
   const store = configureStore();
-  store.dispatch(setEvents(getAllEvents()));
+  const events = await getAllEvents();
+  store.dispatch(setEvents(events));
 
   ReactDOM.render(
     <Provider store={store}>

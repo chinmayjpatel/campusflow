@@ -1,7 +1,4 @@
-import {
-  getAllEvents,
-  getEventById
-} from '../services/EventService';
+import { getAllEvents } from '../services/EventService';
 
 export const setEvents = (events) => ({
   type: 'SET_EVENTS',
@@ -9,10 +6,10 @@ export const setEvents = (events) => ({
 });
 
 export const startSetEvents = () => {
-  return (dispatch) => {
-    const events = getAllEvents();
+  return async (dispatch) => {
+    const events = await getAllEvents();
     dispatch(setEvents(events));
-    return Promise.resolve(events);
+    return events;
   };
 };
 
@@ -32,4 +29,3 @@ export const removeEvent = (id) => ({
   id
 });
 
-export const hydrateEventById = (id) => getEventById(id);
