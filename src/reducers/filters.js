@@ -1,7 +1,8 @@
 const defaultFiltersState = {
   text: '',
   category: 'All',
-  costType: 'All'
+  costType: 'All',
+  timeRange: 'all'
 };
 
 const filterReducer = (state = defaultFiltersState, action) => {
@@ -20,6 +21,11 @@ const filterReducer = (state = defaultFiltersState, action) => {
       return {
         ...state,
         costType: action.costType
+      };
+    case 'SET_TIME_RANGE_FILTER':
+      return {
+        ...state,
+        timeRange: action.timeRange
       };
     default:
       return state;
