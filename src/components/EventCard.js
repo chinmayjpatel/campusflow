@@ -23,6 +23,31 @@ const formatDateTime = (value) =>
 
 const focusManager = new FocusManager();
 
+import React, { useEffect } from 'react';
+import { connect } from 'react-redux';
+import { Link } from 'react-router-dom';
+import {
+  faCalendarAlt,
+  faClock,
+  faMapMarkerAlt,
+  faExternalLinkAlt,
+  faDownload
+} from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { buildICSFile, buildGoogleCalendarUrl } from '../utils/calendar';
+import FocusManager from '../utils/FocusManager';
+
+const formatDateTime = (value) =>
+  new Date(value).toLocaleString([], {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+
+const focusManager = new FocusManager();
+
 export const EventCard = ({ event }) => {
   if (!event) {
     return (
@@ -108,6 +133,13 @@ export const EventCard = ({ event }) => {
     </div>
   );
 };
+
+const mapStateToProps = (state, props) => ({
+  event: state.events.find((event) => event.id === props.match.params.id)
+});
+
+export default connect(mapStateToProps)(EventCard);
+
 
 const mapStateToProps = (state, props) => ({
   event: state.events.find((event) => event.id === props.match.params.id)
