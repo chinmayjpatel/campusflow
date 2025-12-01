@@ -1,79 +1,73 @@
-import events from '../data/events';
+import EngageApiClient from './EngageApiClient';
+import EventNormalizer from './EventNormalizer';
+import DedupeEngine from './DedupeEngine';
+import EventRepository from './EventRepository';
+import SearchIndex from './SearchIndex';
+import FilterEngine from './FilterEngine';
 
-const normalizeEvent = (event) => ({
-  ...event,
-  startDateTime: new Date(event.startDateTime).toISOString(),
-  endDateTime: new Date(event.endDateTime).toISOString()
-});
+// EventService orchestrates ingest -> normalize -> dedupe -> repository
+class EventService {
+  constructor() {
+    this.client = new EngageApiClient();
+    this.normalizer = new EventNormalizer();
+    this.dedupeEngine = new DedupeEngine();
+    this.repository = new EventRepository();
+    this.searchIndex = new SearchIndex();
+    this.filterEngine = new FilterEngine();
+    this.loaded = false;
+  }
 
-const dedupeEvents = (list) => {
-  const seen = new Map();
-  list.forEach((event) => {
-    const key = `${event.title.toLowerCase()}-${new Date(event.startDateTime).toISOString()}`;
-    if (!seen.has(key)) {
-      seen.set(key, normalizeEvent(event));
+  async loadEvents() {
+    if (this.loaded) {
+      return this.repository.list();
     }
-  });
-  return Array.from(seen.values());
-};
 
-const sortedEvents = () =>
-  dedupeEvents(events).sort(
-    (a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
-  );
+    const rawEvents = await this.client.fetchEvents();
+    const normalized = rawEvents.map((event) => this.normalizer.normalize(event));
+    const deduped = this.dedupeEngine.dedupe(normalized);
+    this.repository.replaceAll(deduped);
+    this.searchIndex.buildIndex(deduped);
+    this.loaded = true;
+    return deduped;
+  }
 
-export const getAllEvents = () => sortedEvents();
+  async getAllEvents() {
+    await this.loadEvents();
+    return this.repository.list();
+  }
 
-export const getEventsForToday = () => {
-  const today = new Date();
-  return sortedEvents().filter((event) => {
-    const start = new Date(event.startDateTime);
-    return (
-      start.getFullYear() === today.getFullYear() &&
-      start.getMonth() === today.getMonth() &&
-      start.getDate() === today.getDate()
-    );
-  });
-};
+  async getEventsForToday() {
+    const events = await this.getAllEvents();
+    return this.filterEngine.filter(events, { timeRange: 'today' });
+  }
 
-export const getEventsForThisWeek = () => {
-  const now = new Date();
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay());
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 7);
+  async getEventsForThisWeek() {
+    const events = await this.getAllEvents();
+    return this.filterEngine.filter(events, { timeRange: 'week' });
+  }
 
-  return sortedEvents().filter((event) => {
-    const start = new Date(event.startDateTime);
-    return start >= startOfWeek && start < endOfWeek;
-  });
-};
+  async search(queryString = '') {
+    await this.getAllEvents();
+    return this.searchIndex.search(queryString);
+  }
 
-export const searchEvents = (queryString = '') => {
-  const query = queryString.trim().toLowerCase();
-  if (!query) return sortedEvents();
-  return sortedEvents().filter((event) =>
-    `${event.title} ${event.shortDescription} ${event.longDescription}`
-      .toLowerCase()
-      .includes(query)
-  );
-};
+  async filter(filters = {}) {
+    const events = await this.getAllEvents();
+    return this.filterEngine.filter(events, filters);
+  }
 
-export const filterEvents = ({ category, costType }) => {
-  return sortedEvents().filter((event) => {
-    const categoryMatch = !category || category === 'All' || event.category === category;
-    const costMatch = !costType || costType === 'All' || event.costType === costType;
-    return categoryMatch && costMatch;
-  });
-};
+  async getById(id) {
+    await this.getAllEvents();
+    return this.repository.findById(id);
+  }
+}
 
-export const getEventById = (id) => sortedEvents().find((event) => event.id === id);
+const service = new EventService();
 
-export default {
-  getAllEvents,
-  getEventsForToday,
-  getEventsForThisWeek,
-  searchEvents,
-  filterEvents,
-  getEventById
-};
+export const getAllEvents = () => service.getAllEvents();
+export const getEventsForToday = () => service.getEventsForToday();
+export const getEventsForThisWeek = () => service.getEventsForThisWeek();
+export const searchEvents = (query) => service.search(query);
+export const filterEvents = (filters) => service.filter(filters);
+export const getEventById = (id) => service.getById(id);
+export default service;

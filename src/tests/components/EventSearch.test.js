@@ -8,12 +8,13 @@ import configureStore from '../../store/configureStore';
 import { setEvents } from '../../actions/events';
 import { getAllEvents } from '../../services/EventService';
 
-test('typing in search box filters events by text', () => {
+test('typing in search box filters events by text', async () => {
   const container = document.createElement('div');
   document.body.appendChild(container);
 
   const store = configureStore();
-  store.dispatch(setEvents(getAllEvents()));
+  const events = await getAllEvents();
+  store.dispatch(setEvents(events));
 
   ReactDOM.render(
     <Provider store={store}>

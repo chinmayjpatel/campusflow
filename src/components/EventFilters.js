@@ -1,7 +1,13 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { setCategoryFilter, setCostTypeFilter, setTextFilter } from '../actions/filters';
+import {
+  setCategoryFilter,
+  setCostTypeFilter,
+  setTextFilter,
+  setTimeRangeFilter
+} from '../actions/filters';
 import selectEvents from '../selectors/events';
+import A11yAnnouncer from './A11yAnnouncer';
 
 const EventFilters = ({ filters, categories, dispatch, eventCount }) => {
   return (
@@ -43,9 +49,36 @@ const EventFilters = ({ filters, categories, dispatch, eventCount }) => {
           <option value="Paid">Paid</option>
         </select>
       </div>
+      <div className="input-group__item">
+        <label htmlFor="time-filter">When</label>
+        <select
+          id="time-filter"
+          value={filters.timeRange}
+          onChange={(e) => dispatch(setTimeRangeFilter(e.target.value))}
+        >
+          <option value="all">All</option>
+          <option value="today">Today</option>
+          <option value="week">This week</option>
+        </select>
+      </div>
+      <div className="input-group__item">
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => {
+            dispatch(setTextFilter(''));
+            dispatch(setCategoryFilter('All'));
+            dispatch(setCostTypeFilter('All'));
+            dispatch(setTimeRangeFilter('all'));
+          }}
+        >
+          Clear filters
+        </button>
+      </div>
       <div className="input-group__item" role="status" aria-live="polite">
         Found {eventCount} {eventCount === 1 ? 'event' : 'events'}
       </div>
+      <A11yAnnouncer message={`Found ${eventCount} ${eventCount === 1 ? 'event' : 'events'}`} />
     </section>
   );
 };
